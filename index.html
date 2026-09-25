@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CYBER_PY // 11-TIER MULTILINGUAL MATRIX</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Fira Code & Orbitron -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+  <!-- Pyodide (Python WebAssembly Client-side 0$ Server) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cyberDark: '#07090e',
+            cyberPanel: '#0f1422',
+            cyberBorder: '#1e293b',
+            neonCyan: '#00f0ff',
+            neonPink: '#ff0055',
+            neonYellow: '#fcee0a',
+            neonGreen: '#00ff66',
+            neonPurple: '#bd00ff',
+          },
+          fontFamily: {
+            mono: ['"Fira Code"', 'monospace'],
+            cyber: ['Orbitron', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #07090e;
+      color: #e2e8f0;
+      font-family: 'Fira Code', monospace;
+      overflow-x: hidden;
+    }
+    .crt::after {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      z-index: 50;
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+    .tab-active {
+      background: rgba(0, 240, 255, 0.15);
+      border-bottom: 2px solid #00f0ff;
+      color: #00f0ff;
+      font-weight: bold;
+    }
+    .tab-inactive {
+      background: rgba(15, 20, 34, 0.5);
+      border-bottom: 2px solid transparent;
+      color: #64748b;
+    }
+    .tab-inactive:hover {
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #07090e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00f0ff;
+    }
+  </style>
+</head>
+
+<body class="crt min-h-screen flex flex-col">
+  <!-- TOP NAVIGATION / STATUS BAR -->
+  <header class="border-b border-cyberBorder bg-cyberPanel/90 backdrop-blur px-4 py-2.5 flex items-center justify-between z-10 flex-wrap gap-2">
+    <div class="flex items-center space-x-3">
+      <div class="w-3 h-3 bg-neonCyan rounded-full animate-ping"></div>
+      <span class="font-cyber font-black tracking-wider text-lg sm:text-xl text-neonCyan">CYBER_PY // V4.0</span>
+      <span id="uiBannerBadge" class="hidden md:inline-block text-[10px] uppercase px-2 py-0.5 border border-neonCyan/40 text-neonCyan/80 bg-neonCyan/10 rounded tracking-wider">
+        11-Tier Hacker Ops
+      </span>
+    </div>
+
+    <!-- MODULE SELECTOR -->
+    <div class="flex items-center space-x-2">
+      <label id="uiSelectLabel" class="text-xs text-slate-400 hidden sm:inline">CHỌN TẦNG:</label>
+      <select id="lessonSelect" class="bg-cyberDark border border-neonCyan/50 text-neonCyan text-xs rounded px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-neonCyan max-w-[280px] sm:max-w-none">
+        <!-- Dynamically populated via updateDropdownOptions() -->
+      </select>
+    </div>
+
+    <!-- CONTROLS: LANGUAGE SWITCHER, EXP & WASM STATUS -->
+    <div class="flex items-center space-x-3 text-xs font-mono">
+      <!-- Language Switcher Button -->
+      <button id="langSwitcherBtn" onclick="toggleLanguage()" class="px-2.5 py-1 bg-cyberDark border border-neonPink text-xs rounded font-bold transition flex items-center space-x-1 hover:brightness-125 shadow-lg shadow-neonPink/20">
+        <span class="text-neonCyan" id="langViFlag">VI</span>
+        <span class="text-slate-500">/</span>
+        <span class="text-slate-400" id="langEnFlag">EN</span>
+      </button>
+
+      <div class="text-slate-400">EXP: <span id="expVal" class="text-neonYellow font-bold">0</span></div>
+      
+      <div id="pyodideStatus" class="flex items-center space-x-1.5 text-neonYellow">
+        <span class="inline-block w-2 h-2 bg-neonYellow rounded-full animate-pulse"></span>
+        <span id="uiWasmStatusText">Đang nạp Wasm...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT GRID -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 overflow-hidden">
+    
+    <!-- LEFT PANEL: LESSON PEDAGOGY -->
+    <section class="lg:col-span-5 flex flex-col bg-cyberPanel border border-cyberBorder rounded-lg overflow-hidden shadow-xl">
+      <!-- 2-TAB SWITCHER -->
+      <div class="flex border-b border-cyberBorder bg-cyberDark/60">
+        <button id="tabConceptBtn" onclick="switchTab('concept')" class="flex-1 py-3 px-3 text-xs flex items-center justify-center space-x-2 tab-active transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          <span id="uiTabConceptText">1. HỌC KHÁI NIỆM</span>
+        </button>
+        <button id="tabChallengeBtn" onclick="switchTab('challenge')" class="flex-1 py-3 px-3 text-xs flex items-center justify-center space-x-2 tab-inactive transition-all">
+          <svg class="w-4 h-4 text-neonPink" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span id="uiTabChallengeText" class="text-neonPink font-bold">2. ĐỘT KÍCH THỬ THÁCH</span>
+        </button>
+      </div>
+
+      <!-- LESSON BODY CONTAINER -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-sm" id="lessonContainer"></div>
+    </section>
+
+    <!-- RIGHT PANEL: SIMULATION CANVAS + TERMINAL -->
+    <section class="lg:col-span-7 flex flex-col gap-3">
+      
+      <!-- RADAR CANVAS 2D -->
+      <div class="bg-cyberPanel border border-cyberBorder rounded-lg p-3 relative flex flex-col h-44 sm:h-48 overflow-hidden">
+        <div class="flex items-center justify-between pb-1.5 border-b border-cyberBorder text-xs">
+          <div class="flex items-center space-x-2 text-neonCyan font-cyber">
+            <span class="w-2 h-2 bg-neonCyan rounded-full"></span>
+            <span id="uiRadarTitle">RADAR TRỰC QUAN // DRONE X-100</span>
+          </div>
+          <div id="simFeedback" class="text-slate-400 font-mono text-xs">Chờ lệnh Python thực thi...</div>
+        </div>
+
+        <div class="flex-1 relative mt-2 bg-cyberDark rounded border border-cyberBorder/70 flex items-center justify-center overflow-hidden">
+          <canvas id="gameCanvas" width="600" height="150" class="w-full h-full object-contain"></canvas>
+        </div>
+      </div>
+
+      <!-- CODE EDITOR & CONSOLE -->
+      <div class="flex-1 flex flex-col bg-cyberPanel border border-cyberBorder rounded-lg overflow-hidden">
+        <!-- TOP ACTIONS BAR -->
+        <div class="bg-cyberDark/90 px-4 py-2 flex items-center justify-between border-b border-cyberBorder text-xs flex-wrap gap-2">
+          <div class="flex items-center space-x-2 text-slate-300">
+            <span class="text-neonCyan">FILE:</span>
+            <span id="currentFileName" class="font-bold">exploit.py</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="uiResetBtn" onclick="resetCurrentCode()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition">
+              Khôi phục Code
+            </button>
+            <button id="runBtn" onclick="executePythonCode()" class="px-3.5 py-1.5 bg-neonCyan hover:bg-cyan-300 text-cyberDark font-bold rounded text-xs transition flex items-center space-x-1 shadow-lg shadow-neonCyan/20">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+              <span id="uiRunBtnText">CHẠY CODE (CTRL+ENTER)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CODE TEXTAREA -->
+        <div class="flex-1 relative font-mono text-sm bg-[#0a0d16]">
+          <textarea id="codeEditor" spellcheck="false" class="w-full h-full bg-transparent p-3 text-neonGreen leading-relaxed resize-none focus:outline-none focus:ring-0 font-mono" placeholder="# Viết code Python tại đây..."></textarea>
+        </div>
+
+        <!-- TERMINAL CONSOLE -->
+        <div class="h-44 bg-cyberDark border-t border-cyberBorder flex flex-col font-mono text-xs">
+          <div class="bg-slate-900/90 px-3 py-1 text-slate-400 border-b border-cyberBorder/60 flex items-center justify-between">
+            <span id="uiConsoleHeader">TERMINAL OUTPUT // BẢNG ĐIỀU KHIỂN HACKER</span>
+            <button id="uiClearBtn" onclick="clearConsole()" class="hover:text-white transition">Xóa</button>
+          </div>
+          <div id="consoleOutput" class="flex-1 p-3 overflow-y-auto space-y-1 text-slate-300">
+            <div id="uiConsoleInitial" class="text-slate-500">// Terminal sẵn sàng. Chọn bài học và nhấn "CHẠY CODE".</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // --- AUDIO SYNTHESIZER ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 440, type = 'sine', duration = 0.08) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // --- APPLICATION STATE ---
+    let currentLang = 'vi';
+    let currentLessonId = 1;
+    let currentTab = 'concept';
+    let pyodideInstance = null;
+    let isPyodideReady = false;
+
+    // --- STATIC UI LOCALIZATION DICTIONARY ---
+    const UI_I18N = {
+      vi: {
+        bannerBadge: "Chiến Dịch Luyện Hacker 11 Tầng",
+        selectLabel: "CHỌN TẦNG:",
+        tabConcept: "1. HỌC KHÁI NIỆM",
+        tabChallenge: "2. ĐỘT KÍCH THỬ THÁCH",
+        radarTitle: "RADAR TRỰC QUAN // DRONE X-100",
+        simWait: "Chờ lệnh Python thực thi...",
+        simPassed: "VƯỢT ẢI TẦNG THÀNH CÔNG!",
+        resetBtn: "Khôi phục Code",
+        runBtnText: "CHẠY CODE (CTRL+ENTER)",
+        consoleHeader: "TERMINAL OUTPUT // BẢNG ĐIỀU KHIỂN HACKER",
+        clearBtn: "Xóa",
+        consoleInitial: "// Terminal sẵn sàng. Chọn bài học và nhấn 'CHẠY CODE'.",
+        loadDemoBtn: "Nạp Mã Ví Dụ Lên Editor & Chạy Thử",
+        hintBtn: "Xem Gợi Ý Code",
+        submitBtn: "Nộp Bài Vượt Ải",
+        missionIntel: "TÌNH BÁO NHIỆM VỤ:",
+        targetGoal: "MỤC TIÊU VƯỢT ẢI:",
+        restoredSuccess: "// Khôi phục code gốc thành công.",
+        runningScript: "> Đang chạy tập lệnh Python...",
+        noPrintOutput: "// Lệnh chạy xong nhưng không có print() nào được gọi.",
+        passedToast: "🎉 [XÁC THỰC THÀNH CÔNG] Bạn đã mở khóa Tầng này! +100 EXP",
+        failedToast: "❌ [CHƯA VƯỢT ẢI] Kết quả chưa khớp với yêu cầu đề bài. Hãy bấm 'Xem Gợi Ý Code' nếu gặp khó khăn!",
+        wasmLoading: "Đang nạp Wasm...",
+        wasmReady: "Python 3.11 Sẵn Sàng (0$)",
+        wasmWarn: "⚠️ Python WebAssembly đang khởi động, vui lòng chờ trong giây lát...",
+        levelPrefix: "TẦNG"
+      },
+      en: {
+        bannerBadge: "11-Tier Hacker Ops",
+        selectLabel: "SELECT TIER:",
+        tabConcept: "1. LEARN CONCEPTS",
+        tabChallenge: "2. RAID CHALLENGE",
+        radarTitle: "VISUAL RADAR // DRONE X-100",
+        simWait: "Awaiting Python execution...",
+        simPassed: "TIER INFILTRATED SUCCESSFULLY!",
+        resetBtn: "Reset Code",
+        runBtnText: "EXECUTE CODE (CTRL+ENTER)",
+        consoleHeader: "TERMINAL OUTPUT // HACKER CONSOLE",
+        clearBtn: "Clear",
+        consoleInitial: "// Terminal ready. Select a tier and click 'EXECUTE CODE'.",
+        loadDemoBtn: "Load Demo Code to Editor & Run",
+        hintBtn: "View Code Hint",
+        submitBtn: "Submit Mission Raid",
+        missionIntel: "MISSION INTEL:",
+        targetGoal: "MISSION OBJECTIVE:",
+        restoredSuccess: "// Original code template restored successfully.",
+        runningScript: "> Executing Python bytecode...",
+        noPrintOutput: "// Execution complete with no stdout print() output.",
+        passedToast: "🎉 [AUTHENTICATION SUCCESS] Tier breached! +100 EXP",
+        failedToast: "❌ [OBJECTIVE INCOMPLETE] Output does not match target. Click 'View Code Hint' for assistance!",
+        wasmLoading: "Loading Wasm...",
+        wasmReady: "Python 3.11 Ready (0$)",
+        wasmWarn: "⚠️ Python WebAssembly is initializing, please standby...",
+        levelPrefix: "TIER"
+      }
+    };
+
+    // --- SMART CYBER ERROR LOCALIZATION ---
+    const ERROR_I18N = {
+      vi: {
+        nameError: "🔍 [LỖI TÊN / CHUỖI THIẾU NGOẶC]: Bạn đang gõ một chữ chưa được khai báo. Nếu là chuỗi chữ (String), hãy bọc trong ngoặc kép \"...\".",
+        syntaxError: "⚠️ [LỖI CÚ PHÁP]: Có ký tự bị gõ nhầm hoặc bạn quên dấu hai chấm (:) ở cuối dòng if/for/while/def?",
+        indentError: "📐 [LỖI THỤT ĐẦU DÒNG]: Các dòng lệnh con trong khối if/for/while/def cần bấm Tab hoặc lùi vào 4 phím cách.",
+        typeError: "⚡ [LỖI KIỂU DỮ LIỆU]: Bạn đang cố cộng String với Int. Hãy chuyển chúng về cùng kiểu dữ liệu!",
+        keyError: "🔑 [LỖI TỪ ĐIỂN - KEY ERROR]: Khóa trong Dict không tồn tại. Hãy kiểm tra lại chính tả tên khóa!",
+        genericPrefix: "⚠️ [CẢNH BÁO LỖI]: "
+      },
+      en: {
+        nameError: "🔍 [NAME ERROR / UNQUOTED STRING]: You referenced an undefined identifier. If this is text (String), wrap it in quotes \"...\".",
+        syntaxError: "⚠️ [SYNTAX ERROR]: Invalid token or missing colon (:) at the end of an if/for/while/def statement?",
+        indentError: "📐 [INDENTATION ERROR]: Sub-blocks inside if/for/while/def require an indentation (Press Tab or 4 Spaces).",
+        typeError: "⚡ [TYPE MISMATCH]: Attempted combining incompatible types (e.g. String + Int). Cast or format them first!",
+        keyError: "🔑 [KEY ERROR]: The requested dictionary key was not found. Verify key spelling!",
+        genericPrefix: "⚠️ [SYSTEM WARNING]: "
+      }
+    };
+
+    const LESSONS_DB = {
+      1: {
+        title: {
+          vi: "Tầng 1: Khai Báo Danh Tính (String & Integer)",
+          en: "Tier 1: Identity Declaration (String & Integer)"
+        },
+        concept: {
+          badge: { vi: "CĂN BẢN VỀ KIỂU DỮ LIỆU", en: "DATA TYPES 101" },
+          story: {
+            vi: "Trước khi gửi gói tin xâm nhập máy chủ, hệ thống mạng cần phân biệt đâu là văn bản danh tính (String) và đâu là chỉ số năng lượng (Integer).",
+            en: "Before transmitting injection packets, the cyber grid must distinguish between alphanumeric identity logs (String) and computational energy units (Integer)."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. String (Chuỗi chữ - str)",
+                desc: "Bọc trong dấu nháy kép <code>\"...\"</code> hoặc nháy đơn <code>'...'</code>. Máy tính xem đây là chữ để đọc, không dùng để tính toán.",
+                eg: 'agent = "Cyber_Shadow"'
+              },
+              {
+                name: "2. Integer (Số nguyên - int)",
+                desc: "Số nguyên viết trần trụi, KHÔNG CÓ ngoặc kép. Dùng để cộng trừ nhân chia lượng máu (HP), điểm kinh nghiệm, tiền xu.",
+                eg: 'shield_hp = 100\ncredits = 500'
+              },
+              {
+                name: "⚠️ Cạm bẫy kiểu dữ liệu:",
+                desc: '<code>"10" + "10"</code> sẽ ra chữ <code>"1010"</code> (ghép chữ), nhưng <code>10 + 10</code> sẽ ra số <code>20</code>!',
+                eg: 'print("Mã: " + "A" + "1") # Ghép chữ'
+              }
+            ],
+            en: [
+              {
+                name: "1. String (Character sequence - str)",
+                desc: "Wrapped in double quotes <code>\"...\"</code> or single quotes <code>'...'</code>. Treated as plain textual characters.",
+                eg: 'agent = "Cyber_Shadow"'
+              },
+              {
+                name: "2. Integer (Whole numbers - int)",
+                desc: "Pure numeric digits without quotes. Used for calculating health (HP), EXP points, credits, and metrics.",
+                eg: 'shield_hp = 100\ncredits = 500'
+              },
+              {
+                name: "⚠️ Data Type Trap:",
+                desc: '<code>"10" + "10"</code> evaluates to string <code>"1010"</code>, while <code>10 + 10</code> equals integer <code>20</code>!',
+                eg: 'print("Code: " + "A" + "1") # Concatenates string'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: STRING VS INTEGER ---\nagent = "Phantom_X"\nhp = 100\nbonus_hp = 25\n\nprint("Xác nhận danh tính:", agent)\nprint("Lượng máu sau khi nạp:", hp + bonus_hp)`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Sửa Lỗi Thẻ Điệp Viên Đồng Minh",
+            en: "Patch Allied Operative Identity Card"
+          },
+          intel: {
+            vi: "Một điệp viên gửi thẻ thông tin nhưng gõ nhầm biến chuỗi thiếu dấu nháy, và tiền thưởng lại bị bao trong dấu nháy kép khiến hệ thống không cộng dồn được tiền!",
+            en: "An allied operative sent credentials with an unquoted string, while bounty credits were wrapped in quotes, preventing numerical addition!"
+          },
+          goal: {
+            vi: "Sửa <code>agent_name</code> thành chuỗi và <code>bounty</code> thành số nguyên để in ra đúng tổng tiền 750.",
+            en: "Correct <code>agent_name</code> to a string and <code>bounty</code> to an integer to output the sum 750."
+          },
+          starterCode: `# FIX THE 2 LINES BELOW:\nagent_name = Shadow_Ghost\nbounty = "500"\nbonus = 250\n\ntotal = bounty + bonus\nprint("Điệp viên:", agent_name)\nprint("Tổng tiền:", total)`,
+          validator: (output) => output.includes("Shadow_Ghost") && output.includes("750"),
+          solutionHint: 'agent_name = "Shadow_Ghost"\nbounty = 500\nbonus = 250\ntotal = bounty + bonus\nprint("Điệp viên:", agent_name)\nprint("Tổng tiền:", total)'
+        }
+      },
+      2: {
+        title: {
+          vi: "Tầng 2: Mức Năng Lượng & Tọa Độ (Float & Toán Tử)",
+          en: "Tier 2: Energy Reserves & Vector Math (Float & Operators)"
+        },
+        concept: {
+          badge: { vi: "TÍNH TOÁN KHOA HỌC", en: "SCIENTIFIC COMPUTING" },
+          story: {
+            vi: "Trong không gian 3D, tọa độ radar và thời gian phản ứng thường là các con số thập phân (Float). Bạn cần nắm vững các phép tính toán học.",
+            en: "Radar vector telemetry and reaction times operate with decimals (Float). Master basic math operators to adjust thrusters."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Float (Số thực / Thập phân)",
+                desc: "Số có dấu chấm thập phân như <code>3.14</code>, <code>0.05</code>, <code>9.8</code>. Dùng cho vận tốc, thời gian radar quét.",
+                eg: 'speed = 12.5\nreaction_time = 0.08'
+              },
+              {
+                name: "2. Các toán tử Python cơ bản",
+                desc: "<code>+</code> (cộng), <code>-</code> (trừ), <code>*</code> (nhân), <code>/</code> (chia), <code>**</code> (lũy thừa/mũ), <code>%</code> (chia lấy số dư).",
+                eg: 'fuel = 100 / 4   # Ra 25.0\nremainder = 10 % 3 # Ra 1'
+              }
+            ],
+            en: [
+              {
+                name: "1. Float (Floating-point decimal)",
+                desc: "Numbers containing a decimal point like <code>3.14</code>, <code>0.05</code>. Used for velocity, coordinates, and latency.",
+                eg: 'speed = 12.5\nreaction_time = 0.08'
+              },
+              {
+                name: "2. Standard Python Operators",
+                desc: "<code>+</code> (add), <code>-</code> (subtract), <code>*</code> (multiply), <code>/</code> (divide), <code>**</code> (power), <code>%</code> (modulo).",
+                eg: 'fuel = 100 / 4   # Yields 25.0\nremainder = 10 % 3 # Yields 1'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: FLOAT & OPERATORS ---\nshield_power = 95.5\ndamage = 15.2\nfinal_shield = shield_power - damage\n\nprint("Shield remaining:", final_shield)\nprint("Energy squared:", 5 ** 2)`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Tính Toán Tốc Độ Quét Radar",
+            en: "Compute Radar Scan Velocity"
+          },
+          intel: {
+            vi: "Drone bay qua quãng đường <code>distance = 450.0</code> mét trong thời gian <code>time_sec = 18.0</code> giây. Hãy viết công thức tính vận tốc <code>velocity = distance / time_sec</code>.",
+            en: "The drone covers <code>distance = 450.0</code> meters in <code>time_sec = 18.0</code> seconds. Compute <code>velocity = distance / time_sec</code>."
+          },
+          goal: {
+            vi: "Tính vận tốc và in ra màn hình dòng chữ: <code>Van toc: 25.0</code>",
+            en: "Calculate and print velocity matching: <code>Van toc: 25.0</code>"
+          },
+          starterCode: `distance = 450.0\ntime_sec = 18.0\n\n# Compute velocity = distance / time_sec:\nvelocity = 0.0\n\nprint("Van toc:", velocity)`,
+          validator: (output) => output.includes("25.0"),
+          solutionHint: `distance = 450.0\ntime_sec = 18.0\nvelocity = distance / time_sec\nprint("Van toc:", velocity)`
+        }
+      },
+      3: {
+        title: {
+          vi: "Tầng 3: Cảm Biến Nhị Phân (Boolean & Phép So Sánh)",
+          en: "Tier 3: Binary Sensors (Boolean & Comparisons)"
+        },
+        concept: {
+          badge: { vi: "CHÂN LÝ ĐÚNG / SAI", en: "BOOLEAN LOGIC" },
+          story: {
+            vi: "Lõi máy tính chỉ hiểu 2 trạng thái: BẬT (True) hoặc TẮT (False). Mọi cảm biến laser và phát hiện xâm nhập đều dựa vào Boolean.",
+            en: "Silicon chips operate on binary states: ON (True) or OFF (False). Laser tripwires evaluate purely on Boolean conditions."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Boolean (bool)",
+                desc: "Chỉ nhận một trong hai giá trị duy nhất: <code>True</code> (Đúng) hoặc <code>False</code> (Sai). Chú ý phải viết hoa chữ cái đầu.",
+                eg: 'is_laser_active = True\nhas_admin_key = False'
+              },
+              {
+                name: "2. Phép so sánh trả về Boolean",
+                desc: "<code>==</code> (so sánh bằng), <code>!=</code> (so sánh khác), <code>></code>, <code><</code>, <code>>=</code>, <code><=</code>.",
+                eg: 'print(10 > 5)   # In ra: True\nprint(10 == 20) # In ra: False'
+              }
+            ],
+            en: [
+              {
+                name: "1. Boolean (bool)",
+                desc: "Accepts one of two literals: <code>True</code> or <code>False</code>. Always capitalize the first letter.",
+                eg: 'is_laser_active = True\nhas_admin_key = False'
+              },
+              {
+                name: "2. Comparison Operators",
+                desc: "<code>==</code> (equality), <code>!=</code> (inequality), <code>></code>, <code><</code>, <code>>=</code>, <code><=</code>.",
+                eg: 'print(10 > 5)   # Outputs: True\nprint(10 == 20) # Outputs: False'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: BOOLEAN & COMPARISON ---\nenergy = 80\nis_overcharged = energy > 100\n\nprint("System overcharged?:", is_overcharged)\nprint("Key authenticated?:", "root" == "root")`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Kích Hoạt Cảnh Báo Khiên Hư Hỏng",
+            en: "Trigger Critical Shield Warning"
+          },
+          intel: {
+            vi: "Tạo một biến boolean <code>is_shield_critical</code> để kiểm tra xem khiên <code>shield_hp = 15</code> có nhỏ hơn <code>20</code> hay không.",
+            en: "Initialize a boolean <code>is_shield_critical</code> checking if <code>shield_hp = 15</code> is less than <code>20</code>."
+          },
+          goal: {
+            vi: "In ra giá trị kiểm tra sao cho kết quả hiện ra chữ: <code>True</code>",
+            en: "Print the condition to reveal output: <code>True</code>"
+          },
+          starterCode: `shield_hp = 15\n\n# Evaluate shield_hp < 20 into is_shield_critical:\nis_shield_critical = None\n\nprint("Shield critical status:", is_shield_critical)`,
+          validator: (output) => output.includes("True"),
+          solutionHint: `shield_hp = 15\nis_shield_critical = shield_hp < 20\nprint("Shield critical status:", is_shield_critical)`
+        }
+      },
+      4: {
+        title: {
+          vi: "Tầng 4: Radar Tường Lửa (Lệnh Rẽ Nhánh If/Elif/Else)",
+          en: "Tier 4: Firewall Radar (Conditional Branching If/Elif/Else)"
+        },
+        concept: {
+          badge: { vi: "TƯ DUY QUYẾT ĐỊNH", en: "DECISION LOGIC" },
+          story: {
+            vi: "Drone tiếp cận cổng bảo vệ. Nó phải tự động đưa ra quyết định: né trái, né phải hay kích hoạt khiên phản xạ dựa trên tín hiệu radar.",
+            en: "Approaching defended security gates, autonomous drones branch decisions based on real-time sensor metrics."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Cú pháp If - Elif - Else",
+                desc: "<code>if [điều kiện 1]:</code> làm gì đó. Nếu sai, kiểm tra <code>elif [điều kiện 2]:</code>. Cuối cùng chạy <code>else:</code>.",
+                eg: 'if hp <= 0:\n    print("GAME OVER")\nelif hp < 20:\n    print("BƠM MÁU")\nelse:\n    print("CHIẾN TIẾP")'
+              },
+              {
+                name: "2. Quy tắc thụt đầu dòng (Indentation)",
+                desc: "Các dòng lệnh nằm bên trong <code>if</code> PHẢI được thụt vào trong 4 dấu cách hoặc 1 phím Tab.",
+                eg: 'if True:\n    print("Đúng lề!")'
+              }
+            ],
+            en: [
+              {
+                name: "1. If - Elif - Else Syntax",
+                desc: "<code>if [cond1]:</code> executes when True. Otherwise evaluates <code>elif [cond2]:</code>, falling back to <code>else:</code>.",
+                eg: 'if hp <= 0:\n    print("GAME OVER")\nelif hp < 20:\n    print("HEAL")\nelse:\n    print("ENGAGE")'
+              },
+              {
+                name: "2. Indentation Enforcement",
+                desc: "Blocks inside control flow statements MUST be indented with 4 spaces or 1 Tab key.",
+                eg: 'if True:\n    print("Indented line!")'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: IF / ELIF / ELSE ---\nfirewall_level = 7\n\nif firewall_level < 5:\n    print("Firewall weak: Direct exploit!")\nelif firewall_level <= 8:\n    print("Firewall moderate: Deploy worm!")\nelse:\n    print("Military grade: Abort attempt!")`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Phân Loại Quyền Truy Cập Mạng",
+            en: "Classify Security Clearance"
+          },
+          intel: {
+            vi: "Viết logic kiểm tra biến <code>security_clearance = 9</code>. Nếu điểm lớn hơn hoặc bằng 8, in ra 'ACCESS_GRANTED'. Ngược lại in 'ACCESS_DENIED'.",
+            en: "Verify <code>security_clearance = 9</code>. If >= 8 print 'ACCESS_GRANTED', else print 'ACCESS_DENIED'."
+          },
+          goal: {
+            vi: "Sử dụng câu lệnh <code>if/else</code> để màn hình in ra được chuỗi: <code>ACCESS_GRANTED</code>.",
+            en: "Use an <code>if/else</code> block to output: <code>ACCESS_GRANTED</code>."
+          },
+          starterCode: `security_clearance = 9\n\n# WRITE IF / ELSE STATEMENT HERE:\nif security_clearance >= 8:\n    print("ACCESS_GRANTED")\nelse:\n    print("ACCESS_DENIED")`,
+          validator: (output) => output.includes("ACCESS_GRANTED"),
+          solutionHint: `security_clearance = 9\nif security_clearance >= 8:\n    print("ACCESS_GRANTED")\nelse:\n    print("ACCESS_DENIED")`
+        }
+      },
+      5: {
+        title: {
+          vi: "Tầng 5: Túi Vũ Khí Mạng (Danh Sách List & Thao Tác)",
+          en: "Tier 5: Cyber Arsenal (List Collections & Operations)"
+        },
+        concept: {
+          badge: { vi: "QUẢN LÝ DỮ LIỆU ĐA NĂNG", en: "COLLECTIONS 101" },
+          story: {
+            vi: "Một hacker không thể mang từng biến lẻ tẻ. Danh sách (List) giống như balo trang bị, chứa được hàng trăm vũ khí, tọa độ hay mật khẩu.",
+            en: "Carrying loose variables is inefficient. Lists bundle hundreds of target nodes, payloads, and tokens in a single indexable array."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Khai báo List",
+                desc: "Sử dụng cặp ngoặc vuông <code>[...]</code>. Các phần tử cách nhau bằng dấu phẩy.",
+                eg: 'tools = ["Trojan", "Keylogger", "Scanner"]'
+              },
+              {
+                name: "2. Vị trí chỉ mục (Index) bắt đầu từ 0",
+                desc: "Phần tử đầu tiên nằm ở vị trí <code>0</code>, thứ hai ở vị trí <code>1</code>.",
+                eg: 'first_tool = tools[0] # Lấy ra "Trojan"'
+              },
+              {
+                name: "3. Thêm phần tử mới bằng .append()",
+                desc: "Dùng lệnh <code>list.append(giá trị mới)</code> để bỏ thêm đồ vào cuối danh sách.",
+                eg: 'tools.append("DDoS_Bot")'
+              }
+            ],
+            en: [
+              {
+                name: "1. Defining Lists",
+                desc: "Enclose items in brackets <code>[...]</code> separated by commas.",
+                eg: 'tools = ["Trojan", "Keylogger", "Scanner"]'
+              },
+              {
+                name: "2. Zero-Based Indexing",
+                desc: "Access elements by index starting at <code>0</code> for the first item.",
+                eg: 'first_tool = tools[0] # Yields "Trojan"'
+              },
+              {
+                name: "3. Appending via .append()",
+                desc: "Use <code>list.append(item)</code> to attach new elements at the end.",
+                eg: 'tools.append("DDoS_Bot")'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: LIST OPERATIONS ---\nloot = ["Cipher_Key", "USB_Drive"]\nprint("First item:", loot[0])\n\nloot.append("AI_Chip")\nprint("Inventory after append:", loot)`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Nạp Vũ Khí Mới Vào Balo",
+            en: "Equip Nano Virus into Arsenal"
+          },
+          intel: {
+            vi: "Cho danh sách <code>arsenal = [\"Laser\", \"EMP\"]</code>. Hãy dùng lệnh <code>.append()</code> để thêm món vũ khí <code>\"Nano_Virus\"</code> vào danh sách và in toàn bộ danh sách ra.",
+            en: "Given <code>arsenal = [\"Laser\", \"EMP\"]</code>, use <code>.append()</code> to add <code>\"Nano_Virus\"</code> and print the list."
+          },
+          goal: {
+            vi: "In ra danh sách có chứa cả 3 phần tử: <code>Laser</code>, <code>EMP</code>, <code>Nano_Virus</code>.",
+            en: "Print list containing all 3 tools: <code>Laser</code>, <code>EMP</code>, <code>Nano_Virus</code>."
+          },
+          starterCode: `arsenal = ["Laser", "EMP"]\n\n# 1. Append "Nano_Virus" into arsenal:\n\n\n# 2. Print arsenal to console:\nprint(arsenal)`,
+          validator: (output) => output.includes("Nano_Virus") && output.includes("Laser"),
+          solutionHint: `arsenal = ["Laser", "EMP"]\narsenal.append("Nano_Virus")\nprint(arsenal)`
+        }
+      },
+      6: {
+        title: {
+          vi: "Tầng 6: Cỗ Máy Quét Laser (Vòng Lặp For)",
+          en: "Tier 6: Laser Grid Scanner (For Loops & Iteration)"
+        },
+        concept: {
+          badge: { vi: "TỰ ĐỘNG HÓA VÒNG LẶP", en: "AUTOMATED ITERATION" },
+          story: {
+            vi: "Khi cần quét qua danh sách 100 camera hoặc thử 1000 chìa khóa, bạn không thể gõ tay 1000 lần. Vòng lặp For sẽ tự động duyệt từ đầu đến cuối.",
+            en: "Inspecting hundreds of security cameras one-by-one is tedious. A For loop scans every sequential node automatically."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Cú pháp Vòng lặp For",
+                desc: "<code>for [biến_tạm] in [danh_sách]:</code> sẽ lần lượt gán từng món đồ vào <code>biến_tạm</code> và thực thi lệnh bên trong.",
+                eg: 'for item in ["A", "B", "C"]:\n    print("Quét:", item)'
+              },
+              {
+                name: "2. Hàm range() tiện dụng",
+                desc: "<code>range(5)</code> sẽ tạo ra chuỗi số từ 0 đến 4 (lặp đúng 5 lần).",
+                eg: 'for i in range(3):\n    print("Lần thứ", i)'
+              }
+            ],
+            en: [
+              {
+                name: "1. For Loop Syntax",
+                desc: "<code>for [item] in [collection]:</code> iterates through every item in order.",
+                eg: 'for item in ["A", "B", "C"]:\n    print("Scanning:", item)'
+              },
+              {
+                name: "2. The range() Generator",
+                desc: "<code>range(5)</code> yields sequence 0 through 4 (exactly 5 passes).",
+                eg: 'for i in range(3):\n    print("Cycle:", i)'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: FOR LOOPS ---\ncameras = ["Cam_Lobby", "Cam_Vault", "Cam_Gate"]\n\nfor cam in cameras:\n    print("DEACTIVATING:", cam)\nprint("All cameras offline!")`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Quét Và Đếm Các Cổng Mạng Mở",
+            en: "Scan Open Target Ports"
+          },
+          intel: {
+            vi: "Duyệt qua danh sách các cổng mạng <code>ports = [80, 443, 8080]</code> bằng vòng lặp <code>for</code> và in ra từng cổng với định dạng: <code>CONG_MO: [số cổng]</code>.",
+            en: "Iterate across <code>ports = [80, 443, 8080]</code> using a <code>for</code> loop, outputting: <code>CONG_MO: [port]</code>."
+          },
+          goal: {
+            vi: "Màn hình in ra đủ 3 dòng: <code>CONG_MO: 80</code>, <code>CONG_MO: 443</code>, <code>CONG_MO: 8080</code>.",
+            en: "Terminal displays 3 lines including <code>CONG_MO: 80</code> and <code>CONG_MO: 8080</code>."
+          },
+          starterCode: `ports = [80, 443, 8080]\n\n# ITERATE OVER PORTS WITH FOR LOOP:\nfor p in ports:\n    print("CONG_MO:", p)`,
+          validator: (output) => output.includes("CONG_MO: 80") && output.includes("CONG_MO: 8080"),
+          solutionHint: `ports = [80, 443, 8080]\nfor p in ports:\n    print("CONG_MO:", p)`
+        }
+      },
+      7: {
+        title: {
+          vi: "Tầng 7: Tự Động Hóa Vô Tận (Vòng Lặp While & Break)",
+          en: "Tier 7: Continuous Automation (While Loops & Break)"
+        },
+        concept: {
+          badge: { vi: "LẶP THEO ĐIỀU KIỆN", en: "STATEFUL LOOPS" },
+          story: {
+            vi: "Khác với <code>for</code> duyệt theo danh sách cố định, vòng lặp <code>while</code> sẽ chạy liên tục chừng nào điều kiện vẫn còn ĐÚNG.",
+            en: "Unlike <code>for</code> which traverses fixed items, a <code>while</code> loop loops continuously as long as a condition remains True."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Vòng lặp While",
+                desc: "<code>while [điều kiện]:</code> sẽ lặp lại code cho tới khi điều kiện trở thành False. Chú ý phải thay đổi biến điều kiện sau mỗi vòng để tránh treo máy!",
+                eg: 'battery = 3\nwhile battery > 0:\n    print("Pin:", battery)\n    battery = battery - 1'
+              },
+              {
+                name: "2. Lệnh thoát khẩn cấp: break",
+                desc: "Gặp lệnh <code>break</code>, vòng lặp sẽ dừng ngay lập tức bất kể điều kiện là gì.",
+                eg: 'while True:\n    if found:\n        break'
+              }
+            ],
+            en: [
+              {
+                name: "1. While Loop Mechanism",
+                desc: "<code>while [condition]:</code> loops until condition evaluates False. Always mutate condition variables to avoid infinite loops!",
+                eg: 'battery = 3\nwhile battery > 0:\n    print("Battery:", battery)\n    battery = battery - 1'
+              },
+              {
+                name: "2. Emergency Breakout",
+                desc: "Invoking <code>break</code> terminates loop execution immediately.",
+                eg: 'while True:\n    if found:\n        break'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: WHILE LOOPS ---\npin = 100\nwhile pin > 40:\n    print("Patrol active... Battery level:", pin)\n    pin = pin - 20 # Deduct 20%\n\nprint("Battery low, docking to station!")`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Tháo Ngòi Xung Điện Tử Đếm Ngược",
+            en: "Defuse EMP Countdown Timer"
+          },
+          intel: {
+            vi: "Một quả bom logic đang đếm ngược từ <code>timer = 4</code> về <code>1</code>. Dùng vòng lặp <code>while timer > 0:</code>, in ra từng giây và trừ <code>timer = timer - 1</code>. Cuối cùng in ra <code>DA_THAO_NGOI</code>.",
+            en: "An EMP timer counts down from <code>timer = 4</code> to <code>1</code>. Decrement inside <code>while timer > 0:</code> then print <code>DA_THAO_NGOI</code>."
+          },
+          goal: {
+            vi: "Terminal in ra các số từ 4 về 1 và dòng chữ: <code>DA_THAO_NGOI</code>.",
+            en: "Console prints steps down to 1 and final message: <code>DA_THAO_NGOI</code>."
+          },
+          starterCode: `timer = 4\n\n# WRITE WHILE COUNTDOWN LOOP HERE:\nwhile timer > 0:\n    print("Countdown:", timer)\n    timer = timer - 1\n\nprint("DA_THAO_NGOI")`,
+          validator: (output) => output.includes("1") && output.includes("DA_THAO_NGOI"),
+          solutionHint: `timer = 4\nwhile timer > 0:\n    print("Countdown:", timer)\n    timer = timer - 1\nprint("DA_THAO_NGOI")`
+        }
+      },
+      8: {
+        title: {
+          vi: "Tầng 8: Vũ Khí Đóng Gói (Định Nghĩa Hàm def)",
+          en: "Tier 8: Modular Weapons (Function Definition def)"
+        },
+        concept: {
+          badge: { vi: "KỸ NĂNG HACKER CHUYÊN NGHIỆP", en: "MODULAR PROGRAMMING" },
+          story: {
+            vi: "Không ai muốn viết lại 20 dòng lệnh tính toán nhiều lần. Hacker đóng gói các thuật toán thành các Hàm (Functions) để tái sử dụng chỉ với 1 dòng lệnh.",
+            en: "Avoid repeating complex code. Hacker architects encapsulate logic into reusable functions invoked on demand with arguments."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Từ khóa def (Define)",
+                desc: "<code>def ten_ham(tham_so):</code> dùng để tạo một công cụ mới.",
+                eg: 'def chao_mung(ten):\n    print("Xin chào:", ten)'
+              },
+              {
+                name: "2. Từ khóa return (Trả về kết quả)",
+                desc: "<code>return</code> dùng để trả kết quả tính toán ra ngoài cho biến khác hứng lấy.",
+                eg: 'def nhan_doi(so):\n    return so * 2'
+              }
+            ],
+            en: [
+              {
+                name: "1. Keyword def (Define)",
+                desc: "<code>def func_name(params):</code> encapsulates modular logic blocks.",
+                eg: 'def greet_agent(name):\n    print("Welcome:", name)'
+              },
+              {
+                name: "2. The return Statement",
+                desc: "<code>return</code> passes computed outcomes back to caller variables.",
+                eg: 'def double_val(x):\n    return x * 2'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: PYTHON FUNCTIONS ---\ndef calculate_damage(power, distance):\n    if distance < 10:\n        return power * 2.0\n    return power * 1.0\n\neffective_hit = calculate_damage(50, 5)\nprint("Effective Damage:", effective_hit)`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Chế Tạo Hàm Tính Điểm Trung Bình",
+            en: "Build GPA Calculator Function"
+          },
+          intel: {
+            vi: "Viết một hàm <code>def tinh_diem_tb(toan, tin):</code> nhận vào 2 điểm số và dùng <code>return (toan + tin) / 2</code> để trả về điểm trung bình.",
+            en: "Declare <code>def tinh_diem_tb(math, cs):</code> and use <code>return (math + cs) / 2</code> to return average scores."
+          },
+          goal: {
+            vi: "Gọi hàm với điểm Toán = 9 và Tin = 10, in ra kết quả: <code>DIEM_TB: 9.5</code>",
+            en: "Invoke function with 9 and 10, printing: <code>DIEM_TB: 9.5</code>"
+          },
+          starterCode: `# DEFINE FUNCTION HERE:\ndef tinh_diem_tb(toan, tin):\n    return (toan + tin) / 2\n\n# INVOKE AND PRINT RESULT:\ndiem = tinh_diem_tb(9, 10)\nprint("DIEM_TB:", diem)`,
+          validator: (output) => output.includes("9.5"),
+          solutionHint: `def tinh_diem_tb(toan, tin):\n    return (toan + tin) / 2\n\ndiem = tinh_diem_tb(9, 10)\nprint("DIEM_TB:", diem)`
+        }
+      },
+      // --- NEW ADVANCED TIERS (9, 10, 11) ---
+      9: {
+        title: {
+          vi: "Tầng 9: Siêu Công Cụ Học Đường (Giải Toán ax + b = 0)",
+          en: "Tier 9: School Math Solver (Automated Linear Equation ax + b = 0)"
+        },
+        concept: {
+          badge: { vi: "TỰ ĐỘNG HÓA HỌC ĐƯỜNG", en: "SCHOOL AUTOMATION" },
+          story: {
+            vi: "Học sinh chuyên Tin không bao giờ giải tay 50 bài phương trình bậc nhất giống nhau. Họ viết mã Python để cỗ máy giải trong 0.001 giây.",
+            en: "Cyber students don't solve 50 identical linear equations by hand. They automate algebraic solver algorithms in Python."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Phương trình bậc nhất: a*x + b = 0",
+                desc: "Khi <code>a != 0</code>, nghiệm duy nhất là <code>x = -b / a</code>. Nếu <code>a == 0</code> và <code>b == 0</code>, có vô số nghiệm. Nếu <code>a == 0</code> và <code>b != 0</code>, vô nghiệm.",
+                eg: 'x = -b / a'
+              },
+              {
+                name: "2. Hàm xử lý ngoại lệ số học",
+                desc: "Luôn kiểm tra điều kiện mẫu số <code>a != 0</code> bằng <code>if/else</code> trước khi thực hiện phép chia để tránh lỗi ZeroDivisionError.",
+                eg: 'if a == 0:\n    return "VO_NGHIEM"\nreturn -b / a'
+              }
+            ],
+            en: [
+              {
+                name: "1. Linear Equation: a*x + b = 0",
+                desc: "When <code>a != 0</code>, the unique root is <code>x = -b / a</code>. If <code>a == 0</code> and <code>b == 0</code>, infinite solutions exist. If <code>a == 0</code> and <code>b != 0</code>, no solution exists.",
+                eg: 'x = -b / a'
+              },
+              {
+                name: "2. Guarding against ZeroDivisionError",
+                desc: "Always check <code>a != 0</code> with conditional logic prior to dividing.",
+                eg: 'if a == 0:\n    return "NO_SOLUTION"\nreturn -b / a'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: AUTOMATED EQUATION SOLVER ---\ndef solve_linear(a, b):\n    if a == 0:\n        return "VO_NGHIEM" if b != 0 else "VO_SO_NGHIEM"\n    x = -b / a\n    return round(x, 2)\n\nprint("Nghiem pt 2x - 8 = 0 la:", solve_linear(2, -8))\nprint("Nghiem pt 3x + 15 = 0 la:", solve_linear(3, 15))`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Giải Tự Động Phương Trình: 4x - 20 = 0",
+            en: "Solve Equation: 4x - 20 = 0"
+          },
+          intel: {
+            vi: "Hãy lập trình hàm <code>giai_pt(a, b)</code> để tìm nghiệm của phương trình <code>4x - 20 = 0</code> (tức a = 4, b = -20). Kết quả in ra phải có chuỗi <code>X = 5.0</code>.",
+            en: "Implement <code>giai_pt(a, b)</code> to solve <code>4x - 20 = 0</code> (where a = 4, b = -20). Print matching: <code>X = 5.0</code>."
+          },
+          goal: {
+            vi: "In ra chính xác kết quả: <code>NGHIEM: X = 5.0</code>",
+            en: "Print output containing: <code>NGHIEM: X = 5.0</code>"
+          },
+          starterCode: `# SOLVE 4x - 20 = 0 USING PYTHON:\ndef giai_pt(a, b):\n    # Calculate x = -b / a\n    x = -b / a\n    return x\n\nket_qua = giai_pt(4, -20)\nprint("NGHIEM: X =", ket_qua)`,
+          validator: (output) => output.includes("5.0"),
+          solutionHint: `def giai_pt(a, b):\n    return -b / a\n\nket_qua = giai_pt(4, -20)\nprint("NGHIEM: X =", ket_qua)`
+        }
+      },
+      10: {
+        title: {
+          vi: "Tầng 10: Giao Thức Mạng & Chat Đa Người Dùng (Dictionary Packet)",
+          en: "Tier 10: Chat & Network Protocol (Dictionary Packet Routing)"
+        },
+        concept: {
+          badge: { vi: "GIAO THỨC TRUYỀN DỮ LIỆU", en: "NETWORK PROTOCOLS" },
+          story: {
+            vi: "Khi các điệp viên mạng trao đổi tin nhắn qua Discord hay Matrix, dữ liệu được đóng gói thành các Gói Tin (Packets) dạng Từ Điển (Dictionary) gồm: người gửi, người nhận và nội dung.",
+            en: "When field agents communicate over encrypted mesh relays, data packets travel structured as key-value dictionaries containing sender, target, and payload."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Từ điển (Dictionary - dict)",
+                desc: "Tập hợp các cặp <code>\"khóa\": giá_trị</code> bọc trong ngoặc nhọn <code>{...}</code>. Truy xuất giá trị bằng <code>goi_tin[\"sender\"]</code>.",
+                eg: 'packet = {"from": "Ghost", "to": "Neo", "msg": "Ready"}'
+              },
+              {
+                name: "2. Định tuyến tin nhắn (Routing)",
+                desc: "Máy chủ kiểm tra xem trường <code>\"to\"</code> có khớp với người nhận hay không trước khi chuyển tiếp dữ liệu.",
+                eg: 'if packet["to"] == "Neo":\n    print("Tin nhắn:", packet["msg"])'
+              }
+            ],
+            en: [
+              {
+                name: "1. Python Dictionary (dict)",
+                desc: "Key-value pairings enclosed in curly brackets <code>{...}</code>. Retrieve values via <code>packet[\"sender\"]</code>.",
+                eg: 'packet = {"from": "Ghost", "to": "Neo", "msg": "Ready"}'
+              },
+              {
+                name: "2. Packet Routing & Filtering",
+                desc: "Routers inspect the <code>\"to\"</code> header before forwarding payloads to the recipient agent.",
+                eg: 'if packet["to"] == "Neo":\n    print("Message:", packet["msg"])'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: CHAT PACKET PROTOCOL ---\ndef create_packet(sender, receiver, text):\n    return {\n        "from": sender,\n        "to": receiver,\n        "payload": text,\n        "encrypted": True\n    }\n\npkt1 = create_packet("Agent_01", "Agent_02", "Firewall breached!")\nprint("Gói tin truyền mạng:", pkt1)\nprint("Người nhận:", pkt1["to"])\nprint("Nội dung:", pkt1["payload"])`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Lọc Tin Nhắn Chứa Từ Khóa Bí Mật",
+            en: "Filter Secure Chat Packet"
+          },
+          intel: {
+            vi: "Cho gói tin <code>packet = {\"sender\": \"Alice\", \"receiver\": \"Bob\", \"msg\": \"ALPHA_SECRET_KEY\"}</code>. Hãy lấy giá trị <code>msg</code> từ gói tin và in ra với định dạng: <code>DECODED: ALPHA_SECRET_KEY</code>.",
+            en: "Given <code>packet = {\"sender\": \"Alice\", \"receiver\": \"Bob\", \"msg\": \"ALPHA_SECRET_KEY\"}</code>, extract <code>packet[\"msg\"]</code> and print: <code>DECODED: ALPHA_SECRET_KEY</code>."
+          },
+          goal: {
+            vi: "Trích xuất giá trị từ khóa 'msg' của từ điển và in ra đúng chuỗi: <code>DECODED: ALPHA_SECRET_KEY</code>",
+            en: "Extract 'msg' from dictionary and display: <code>DECODED: ALPHA_SECRET_KEY</code>"
+          },
+          starterCode: `packet = {\n    "sender": "Alice",\n    "receiver": "Bob",\n    "msg": "ALPHA_SECRET_KEY"\n}\n\n# EXTRACT MESSAGE FROM PACKET DICT:\nnoi_dung = packet["msg"]\n\nprint("DECODED:", noi_dung)`,
+          validator: (output) => output.includes("ALPHA_SECRET_KEY") && output.includes("DECODED"),
+          solutionHint: `packet = {"sender": "Alice", "receiver": "Bob", "msg": "ALPHA_SECRET_KEY"}\nnoi_dung = packet["msg"]\nprint("DECODED:", noi_dung)`
+        }
+      },
+      11: {
+        title: {
+          vi: "Tầng 11: Phòng Thủ Lưu Lượng & Rate Limiter (Chống Quá Tải Server)",
+          en: "Tier 11: Traffic Defense & Rate Limiter (Server Flood Protection)"
+        },
+        concept: {
+          badge: { vi: "AN NINH MẠNG PHÒNG THỦ", en: "CYBER DEFENSE" },
+          story: {
+            vi: "Khi máy chủ bị gửi hàng ngàn yêu cầu truy cập liên tục trong 1 giây, hệ thống phòng thủ cần một cơ chế 'Rate Limiter' (Giới hạn tốc độ) để đếm và chặn các địa chỉ gửi vượt ngưỡng cho phép.",
+            en: "When servers get inundated with malicious connection storms, defensive engineers deploy Rate Limiters to track request volumes per IP and drop floods before service degradation."
+          },
+          keyPoints: {
+            vi: [
+              {
+                name: "1. Cơ chế Rate Limiter",
+                desc: "Thiết lập một ngưỡng tối đa: ví dụ <code>MAX_LIMIT = 3</code> yêu cầu. Mỗi khi có request đến, tăng biến đếm <code>count += 1</code>.",
+                eg: 'if request_count > MAX_LIMIT:\n    print("BLOCK")'
+              },
+              {
+                name: "2. Bộ lọc IP độc hại",
+                desc: "Sử dụng vòng lặp duyệt qua danh sách các IP gửi đến. Nếu cùng 1 IP xuất hiện quá nhiều lần, kích hoạt chế độ chặn phòng thủ.",
+                eg: 'for ip in traffic_log:\n    # Xử lý đếm IP'
+              }
+            ],
+            en: [
+              {
+                name: "1. The Rate Limiter Pattern",
+                desc: "Define a threshold constant like <code>MAX_LIMIT = 3</code>. Increment request counters upon each inbound connection.",
+                eg: 'if request_count > MAX_LIMIT:\n    print("BLOCK")'
+              },
+              {
+                name: "2. Flood Filtering Logic",
+                desc: "Iterate across network access logs and trigger firewall drop rules whenever request bursts exceed safe margins.",
+                eg: 'for ip in traffic_log:\n    # Filter traffic'
+              }
+            ]
+          },
+          demoCode: `# --- DEMO: RATE LIMITER DEFENSE ---\nMAX_REQUESTS = 3\ntraffic_stream = ["User_A", "User_A", "User_A", "User_A", "User_B"]\n\nprocessed = 0\nfor req in traffic_stream:\n    if req == "User_A":\n        processed += 1\n        if processed > MAX_REQUESTS:\n            print(f"FIREWALL_DROP: {req} vượt quá ngưỡng ({processed}/{MAX_REQUESTS})!")\n        else:\n            print(f"ACCEPT: {req} yêu cầu số {processed}")`
+        },
+        challenge: {
+          badge: { vi: "NHIỆM VỤ ĐỘT KÍCH", en: "RAID CHALLENGE" },
+          missionTitle: {
+            vi: "Kích Hoạt Tường Lửa Chặn IP Bất Thường",
+            en: "Trigger Rate Limiter Firewall Drop"
+          },
+          intel: {
+            vi: "Máy chủ nhận chuỗi kết nối từ IP nghi vấn: <code>requests = [1, 2, 3, 4, 5]</code>. Với ngưỡng an toàn <code>LIMIT = 3</code>, khi biến đếm vượt quá 3, hãy in ra <code>CHAN_IP: 192.168.1.99</code>.",
+            en: "The host detected connection bursts: <code>requests = [1, 2, 3, 4, 5]</code>. With safe threshold <code>LIMIT = 3</code>, drop connections exceeding 3 by printing: <code>CHAN_IP: 192.168.1.99</code>."
+          },
+          goal: {
+            vi: "In ra thông báo chặn thành công chứa chuỗi: <code>CHAN_IP: 192.168.1.99</code>",
+            en: "Output defense alert containing: <code>CHAN_IP: 192.168.1.99</code>"
+          },
+          starterCode: `requests = [1, 2, 3, 4, 5]\nLIMIT = 3\n\nfor count in requests:\n    if count > LIMIT:\n        print("CHAN_IP: 192.168.1.99")\n        break\n    else:\n        print("CHO_PHEP_KET_NOI:", count)`,
+          validator: (output) => output.includes("CHAN_IP: 192.168.1.99"),
+          solutionHint: `requests = [1, 2, 3, 4, 5]\nLIMIT = 3\nfor count in requests:\n    if count > LIMIT:\n        print("CHAN_IP: 192.168.1.99")\n        break\n    else:\n        print("CHO_PHEP_KET_NOI:", count)`
+        }
+      }
+    };
+  </script>
+
+  <script>
+    // --- LANGUAGE SWITCHER CONTROLLER ---
+    function toggleLanguage() {
+      currentLang = currentLang === 'vi' ? 'en' : 'vi';
+      playBeep(600, 'triangle', 0.06);
+
+      const viFlag = document.getElementById('langViFlag');
+      const enFlag = document.getElementById('langEnFlag');
+      if (currentLang === 'vi') {
+        viFlag.className = 'text-neonCyan font-bold';
+        enFlag.className = 'text-slate-400 font-normal';
+      } else {
+        viFlag.className = 'text-slate-400 font-normal';
+        enFlag.className = 'text-neonCyan font-bold';
+      }
+
+      applyLanguage();
+    }
+
+    function applyLanguage() {
+      const ui = UI_I18N[currentLang];
+
+      document.getElementById('uiBannerBadge').innerText = ui.bannerBadge;
+      document.getElementById('uiSelectLabel').innerText = ui.selectLabel;
+      document.getElementById('uiTabConceptText').innerText = ui.tabConcept;
+      document.getElementById('uiTabChallengeText').innerText = ui.tabChallenge;
+      document.getElementById('uiRadarTitle').innerText = ui.radarTitle;
+      document.getElementById('uiResetBtn').innerText = ui.resetBtn;
+      document.getElementById('uiRunBtnText').innerText = ui.runBtnText;
+      document.getElementById('uiConsoleHeader').innerText = ui.consoleHeader;
+      document.getElementById('uiClearBtn').innerText = ui.clearBtn;
+
+      if (isPyodideReady) {
+        document.getElementById('uiWasmStatusText').innerText = ui.wasmReady;
+      } else {
+        document.getElementById('uiWasmStatusText').innerText = ui.wasmLoading;
+      }
+
+      updateDropdownOptions();
+      renderLessonContent();
+    }
+
+    function updateDropdownOptions() {
+      const select = document.getElementById('lessonSelect');
+      const savedValue = currentLessonId;
+      select.innerHTML = '';
+
+      for (let i = 1; i <= 11; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = LESSONS_DB[i].title[currentLang];
+        if (i === savedValue) opt.selected = true;
+        select.appendChild(opt);
+      }
+    }
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      initCanvas();
+      updateDropdownOptions();
+      renderLessonContent();
+      await initPyodide();
+    });
+
+    // --- PYODIDE CLIENT EXECUTION (0$ SERVER COST) ---
+    async function initPyodide() {
+      const statusEl = document.getElementById('pyodideStatus');
+      const ui = UI_I18N[currentLang];
+      try {
+        pyodideInstance = await loadPyodide({
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/"
+        });
+        isPyodideReady = true;
+        statusEl.innerHTML = `
+          <span class="inline-block w-2 h-2 bg-neonGreen rounded-full"></span>
+          <span id="uiWasmStatusText" class="text-neonGreen">${ui.wasmReady}</span>
+        `;
+        playBeep(880, 'sine', 0.15);
+      } catch (err) {
+        statusEl.innerHTML = `<span class="text-neonPink">Engine Glitch</span>`;
+        console.error(err);
+      }
+    }
+
+    // --- TAB SWITCHER ---
+    function switchTab(tabName) {
+      currentTab = tabName;
+      playBeep(520, 'triangle', 0.05);
+
+      const conceptBtn = document.getElementById('tabConceptBtn');
+      const challengeBtn = document.getElementById('tabChallengeBtn');
+
+      if (tabName === 'concept') {
+        conceptBtn.className = "flex-1 py-3 px-3 text-xs flex items-center justify-center space-x-2 tab-active transition-all";
+        challengeBtn.className = "flex-1 py-3 px-3 text-xs flex items-center justify-center space-x-2 tab-inactive transition-all";
+      } else {
+        conceptBtn.className = "flex-1 py-3 px-3 text-xs flex items-center justify-center space-x-2 tab-inactive transition-all";
+        challengeBtn.className = "flex-1 py-3 px-3 text-xs flex items-center justify-center space-x-2 tab-active transition-all";
+      }
+      renderLessonContent();
+    }
+
+    // --- RENDER DYNAMIC LESSON CONTENT (LOCALIZED) ---
+    function renderLessonContent() {
+      const lesson = LESSONS_DB[currentLessonId];
+      const container = document.getElementById('lessonContainer');
+      const editor = document.getElementById('codeEditor');
+      const ui = UI_I18N[currentLang];
+
+      if (currentTab === 'concept') {
+        const points = lesson.concept.keyPoints[currentLang];
+        let pointsHtml = points.map(p => `
+          <div class="bg-cyberDark/80 p-3 rounded border border-cyberBorder">
+            <div class="text-neonCyan font-bold text-xs mb-1">${p.name}</div>
+            <p class="text-xs text-slate-300 leading-relaxed">${p.desc}</p>
+            <pre class="mt-2 text-[11px] bg-black/60 p-2 rounded text-neonGreen font-mono overflow-x-auto">${p.eg}</pre>
+          </div>
+        `).join('');
+
+        container.innerHTML = `
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-neonCyan/20 text-neonCyan border border-neonCyan/40">
+                ${lesson.concept.badge[currentLang]}
+              </span>
+              <span class="text-xs text-slate-400 font-mono">${ui.levelPrefix} ${currentLessonId}/11</span>
+            </div>
+            <h2 class="text-base font-cyber font-bold text-white tracking-wide">${lesson.title[currentLang]}</h2>
+            <div class="p-3 bg-neonCyan/5 border-l-2 border-neonCyan text-xs text-slate-300 italic">
+              "${lesson.concept.story[currentLang]}"
+            </div>
+            <div class="space-y-3">
+              ${pointsHtml}
+            </div>
+            <div class="pt-2">
+              <button onclick="loadDemoCode()" class="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-neonCyan border border-neonCyan/40 rounded text-xs font-mono font-bold transition flex items-center justify-center space-x-2">
+                <span>${ui.loadDemoBtn}</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </button>
+            </div>
+          </div>
+        `;
+        editor.value = lesson.concept.demoCode;
+        document.getElementById('currentFileName').innerText = `demo_tier_${currentLessonId}.py`;
+      } else {
+        container.innerHTML = `
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-neonPink/20 text-neonPink border border-neonPink/40">
+                ${lesson.challenge.badge[currentLang]}
+              </span>
+              <span class="text-xs text-neonYellow font-mono font-bold">+100 EXP</span>
+            </div>
+            <h2 class="text-base font-cyber font-bold text-white tracking-wide text-neonPink">
+              🎯 ${lesson.challenge.missionTitle[currentLang]}
+            </h2>
+            <div class="p-3 bg-cyberDark/90 border border-cyberBorder rounded text-xs space-y-2">
+              <div class="text-neonYellow font-bold flex items-center space-x-1">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                <span>${ui.missionIntel}</span>
+              </div>
+              <p class="text-slate-300 leading-relaxed">${lesson.challenge.intel[currentLang]}</p>
+            </div>
+            <div class="p-3 bg-neonGreen/10 border border-neonGreen/30 rounded text-xs text-slate-200">
+              <span class="text-neonGreen font-bold">${ui.targetGoal}</span> ${lesson.challenge.goal[currentLang]}
+            </div>
+            <div class="pt-2 flex gap-2">
+              <button onclick="revealHint()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded border border-slate-700">
+                ${ui.hintBtn}
+              </button>
+              <button onclick="executePythonCode()" class="flex-1 py-2 bg-neonPink hover:bg-pink-600 text-white font-bold text-xs rounded shadow-lg shadow-neonPink/30 flex items-center justify-center space-x-1">
+                <span>${ui.submitBtn}</span>
+              </button>
+            </div>
+          </div>
+        `;
+        editor.value = lesson.challenge.starterCode;
+        document.getElementById('currentFileName').innerText = `challenge_tier_${currentLessonId}.py`;
+      }
+    }
+
+    function loadDemoCode() {
+      const lesson = LESSONS_DB[currentLessonId];
+      document.getElementById('codeEditor').value = lesson.concept.demoCode;
+      executePythonCode();
+    }
+
+    function resetCurrentCode() {
+      const lesson = LESSONS_DB[currentLessonId];
+      const editor = document.getElementById('codeEditor');
+      editor.value = currentTab === 'concept' ? lesson.concept.demoCode : lesson.challenge.starterCode;
+      appendConsole(UI_I18N[currentLang].restoredSuccess, 'info');
+      playBeep(330, 'square', 0.05);
+    }
+
+    function revealHint() {
+      const lesson = LESSONS_DB[currentLessonId];
+      const prefix = currentLang === 'vi' ? '// GỢI Ý MÃ LỜI GIẢI:\n' : '// SOLUTION CODE HINT:\n';
+      appendConsole(`${prefix}${lesson.challenge.solutionHint}`, 'warn');
+      playBeep(440, 'triangle', 0.08);
+    }
+
+    document.getElementById('lessonSelect').addEventListener('change', (e) => {
+      currentLessonId = parseInt(e.target.value);
+      playBeep(650, 'sine', 0.08);
+      renderLessonContent();
+      triggerDroneAnimation('idle');
+    });
+
+    async function executePythonCode() {
+      const ui = UI_I18N[currentLang];
+      if (!isPyodideReady) {
+        appendConsole(ui.wasmWarn, "warn");
+        return;
+      }
+
+      const code = document.getElementById('codeEditor').value;
+      playBeep(700, 'sine', 0.04);
+
+      let capturedOutput = "";
+      pyodideInstance.setStdout({
+        batched: (text) => {
+          capturedOutput += text + "\n";
+        }
+      });
+
+      appendConsole(ui.runningScript, "system");
+
+      try {
+        await pyodideInstance.runPythonAsync(code);
+        
+        if (capturedOutput.trim()) {
+          appendConsole(capturedOutput.trim(), "stdout");
+        } else {
+          appendConsole(ui.noPrintOutput, "info");
+        }
+
+        triggerDroneAnimation('success');
+
+        if (currentTab === 'challenge') {
+          const lesson = LESSONS_DB[currentLessonId];
+          const isPassed = lesson.challenge.validator(capturedOutput);
+
+          if (isPassed) {
+            playBeep(980, 'sine', 0.2);
+            setTimeout(() => playBeep(1300, 'sine', 0.25), 100);
+            appendConsole(ui.passedToast, "success");
+            
+            const expEl = document.getElementById('expVal');
+            expEl.innerText = parseInt(expEl.innerText) + 100;
+            document.getElementById('simFeedback').innerHTML = `<span class="text-neonGreen font-bold">${ui.simPassed}</span>`;
+          } else {
+            playBeep(220, 'sawtooth', 0.2);
+            appendConsole(ui.failedToast, "error");
+          }
+        }
+
+      } catch (err) {
+        playBeep(180, 'sawtooth', 0.25);
+        triggerDroneAnimation('fail');
+        translateCyberError(err.message);
+      }
+    }
+
+    // --- SMART ERROR TRANSLATOR (MULTILINGUAL) ---
+    function translateCyberError(errMsg) {
+      const errDict = ERROR_I18N[currentLang];
+      let friendly = "";
+
+      if (errMsg.includes("NameError")) {
+        friendly = errDict.nameError;
+      } else if (errMsg.includes("SyntaxError")) {
+        friendly = errDict.syntaxError;
+      } else if (errMsg.includes("IndentationError")) {
+        friendly = errDict.indentError;
+      } else if (errMsg.includes("TypeError")) {
+        friendly = errDict.typeError;
+      } else if (errMsg.includes("KeyError")) {
+        friendly = errDict.keyError;
+      } else {
+        friendly = `${errDict.genericPrefix}${errMsg}`;
+      }
+      appendConsole(friendly, "error");
+    }
+
+    function appendConsole(text, type = "info") {
+      const consoleEl = document.getElementById('consoleOutput');
+      const line = document.createElement('div');
+      
+      switch (type) {
+        case 'stdout':
+          line.className = "text-neonCyan font-bold";
+          break;
+        case 'success':
+          line.className = "text-neonGreen font-bold bg-neonGreen/10 p-1.5 rounded border border-neonGreen/30";
+          break;
+        case 'error':
+          line.className = "text-neonPink font-medium bg-neonPink/10 p-1.5 rounded border border-neonPink/40";
+          break;
+        case 'warn':
+          line.className = "text-neonYellow";
+          break;
+        case 'system':
+          line.className = "text-slate-500 italic";
+          break;
+        default:
+          line.className = "text-slate-300";
+      }
+
+      line.innerText = text;
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function clearConsole() {
+      document.getElementById('consoleOutput').innerHTML = `<div class="text-slate-500">// Terminal cleared.</div>`;
+    }
+
+    // --- 2D CANVAS DRONE VISUALIZER ---
+    let canvas, ctx;
+    let droneX = 80, droneY = 75;
+    let droneState = 'idle';
+
+    function initCanvas() {
+      canvas = document.getElementById('gameCanvas');
+      ctx = canvas.getContext('2d');
+      requestAnimationFrame(renderCanvasLoop);
+    }
+
+    function triggerDroneAnimation(state) {
+      droneState = state;
+      if (state === 'success') {
+        droneX = Math.min(canvas.width - 100, droneX + 45);
+      } else if (state === 'fail') {
+        droneX = Math.max(80, droneX - 25);
+      }
+    }
+
+    function renderCanvasLoop(time) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Grid Lines
+      ctx.strokeStyle = "rgba(30, 41, 59, 0.4)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 30) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+
+      // Target Core
+      ctx.strokeStyle = "#00f0ff";
+      ctx.fillStyle = "rgba(0, 240, 255, 0.1)";
+      ctx.strokeRect(500, 25, 60, 100);
+      ctx.fillRect(500, 25, 60, 100);
+      ctx.fillStyle = "#00f0ff";
+      ctx.font = "10px Orbitron";
+      const coreLabel = currentLang === 'vi' ? "LÕI DỮ LIỆU" : "DATA CORE";
+      ctx.fillText(coreLabel, 495, 20);
+
+      // Hover Effect
+      const hover = Math.sin(time / 200) * 4;
+      const currentY = droneY + hover;
+
+      // Draw Drone
+      ctx.save();
+      ctx.shadowColor = droneState === 'fail' ? '#ff0055' : '#00ff66';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = droneState === 'fail' ? '#ff0055' : '#00ff66';
+      
+      ctx.beginPath();
+      ctx.moveTo(droneX + 18, currentY);
+      ctx.lineTo(droneX - 12, currentY - 10);
+      ctx.lineTo(droneX - 6, currentY);
+      ctx.lineTo(droneX - 12, currentY + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // Thruster
+      ctx.fillStyle = "#00f0ff";
+      ctx.fillRect(droneX - 18, currentY - 2.5, 5, 5);
+      ctx.restore();
+
+      requestAnimationFrame(renderCanvasLoop);
+    }
+
+    // Global Key Listener: Ctrl+Enter or Cmd+Enter to execute code
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        executePythonCode();
+      }
+    });
+  </script>
+</body>
+</html>
